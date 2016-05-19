@@ -4,11 +4,12 @@
 #' @param pol One or more polygons to find
 #' @param ultimate optional Boolean, TRUE = find polygon furthest away from centroid. False = ordinary centroid
 
-library(rgeos)
+require(rgeos)
+require(sp)
 
 centroid <- function(pol,ultimate=TRUE,iterations=5){
+  new_pol <- pol
   if (ultimate){
-    new_pol_list <- list()
     # For every polygon do this:
     for (i in 1:length(pol)){
       width <- -10
@@ -35,27 +36,38 @@ centroid <- function(pol,ultimate=TRUE,iterations=5){
           centr<- centr_new
         }
       }
-      #take the biggest polygon:
+      #take the biggest polygon in case of multiple polygons:
       d <- disaggregate(centr)
       if (length(d)>1){
-        biggest_area <- gARea(d[1,])
+        biggest_area <- gArea(d[1,])
         which_pol <- 1                             
         for (k in 2:length(d)){
-          if (gARea(d[k,]) > biggest_area){
-            biggest_area <- gARea(d[k,])
+          if (gArea(d[k,]) > biggest_area){
+            biggest_area <- gArea(d[k,])
             which_pol <- k
           }
-        } 
+        }
         centr <- d[which_pol,]
       }
       #add to class polygons:
-      print (class(centr))
-      new_pol_list[i] <- centr
+      new_pol@polygons[[i]]@Polygons[[1]]@coords <- centr@polygons[[1]]@Polygons[[1]]@coords
+      new_pol@polygons[[i]] <- remove.holes(new_pol@polygons[[i]])
     }
-    new_pol <- rbind(new_pol_list)
-    centroids <- gCentroid(pol,byid=TRUE)
+    centroids <- gCentroid(new_pol,byid=TRUE)
   }else{
     centroids <- gCentroid(pol,byid=TRUE)  
   }  
-  return(centroids)
+  return(c(centroids,new_pol))
+}
+
+#Given an object of class Polygons, returns
+#a similar object with no holes
+
+
+remove.holes <- function(Poly){
+    is.hole <- lapply(Poly@Polygons,function(P)P@hole)
+    is.hole <- unlist(is.hole)
+    polys <- Poly@Polygons[!is.hole]
+    Poly <- Polygons(polys,ID=Poly@ID)
+    Poly
 }
