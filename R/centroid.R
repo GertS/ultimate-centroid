@@ -7,12 +7,12 @@
 require(rgeos)
 require(sp)
 
-centroid <- function(pol,ultimate=TRUE,iterations=5){
+centroid <- function(pol,ultimate=TRUE,iterations=5,initial_width_step=10){
   if (ultimate){
     new_pol <- pol
     # For every polygon do this:
     for (i in 1:length(pol)){
-      width <- -10
+      width <- -initial_width_step
       area <- gArea(pol[i,])
       centr <- pol[i,]
       wasNull <- FALSE
@@ -20,7 +20,7 @@ centroid <- function(pol,ultimate=TRUE,iterations=5){
         if (!wasNull){ # stop when buffer polygon was alread too small
           centr_new <- gBuffer(centr,width=width)
           # if the buffer has a negative size:
-          substract_width <- width/10
+          substract_width <- width/20
           while (is.null(centr_new)){ #gradually decrease the buffer size until it has positive area
             width <- width-substract_width
             centr_new <- gBuffer(centr,width=width)
