@@ -26,6 +26,9 @@ centroid <- function(pol,ultimate=TRUE,iterations=5,initial_width_step=10){
             centr_new <- gBuffer(centr,width=width)
             wasNull <- TRUE
           }
+          if (!(is.null(centr_new))){
+            plot(centr_new,add=T)
+          }
           new_area <- gArea(centr_new)
           #linear regression:
           slope <- (new_area-area)/width
@@ -50,8 +53,8 @@ centroid <- function(pol,ultimate=TRUE,iterations=5,initial_width_step=10){
         centr <- d[which_pol,]
       }
       #add to class polygons:
-      new_pol@polygons[[i]]@Polygons[[1]]@coords <- centr@polygons[[1]]@Polygons[[1]]@coords
       new_pol@polygons[[i]] <- remove.holes(new_pol@polygons[[i]])
+      new_pol@polygons[[i]]@Polygons[[1]]@coords <- centr@polygons[[1]]@Polygons[[1]]@coords
     }
     centroids <- gCentroid(new_pol,byid=TRUE)
   }else{
@@ -65,9 +68,24 @@ centroid <- function(pol,ultimate=TRUE,iterations=5,initial_width_step=10){
 
 
 remove.holes <- function(Poly){
-    is.hole <- lapply(Poly@Polygons,function(P)P@hole)
-    is.hole <- unlist(is.hole)
-    polys <- Poly@Polygons[!is.hole]
-    Poly <- Polygons(polys,ID=Poly@ID)
-    Poly
+  # remove holes
+  is.hole <- lapply(Poly@Polygons,function(P)P@hole)
+  is.hole <- unlist(is.hole)
+  polys <- Poly@Polygons[!is.hole]
+  Poly <- Polygons(polys,ID=Poly@ID)
+  # remove 'islands'
+  max_area <- largest_area(Poly)
+  is.sub <- lapply(Poly@Polygons,function(P)P@area<max_area)  
+  is.sub <- unlist(is.sub)
+  polys <- Poly@Polygons[!is.sub]
+  Poly <- Polygons(polys,ID=Poly@ID)
+  Poly
+}
+largest_area <- function(Poly){
+  total_polygons <- length(Poly@Polygons)
+  max_area <- 0
+  for (i in 1:total_polygons){
+    max_area <- max(max_area,Poly@Polygons[[i]]@area)
+  }
+  max_area
 }
